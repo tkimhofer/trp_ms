@@ -1,4 +1,4 @@
-library(metabom8)
+#library(metabom8)
 library(plyr)
 library(reshape2)
 library(ggplot2)
@@ -17,7 +17,7 @@ import_trp<-function(fil){
   comp=lapply(fil, function(fid){
     print(fid)
     # read and extract compounds
-    ds=read.table(fid, skip = 0, fill = T, sep='\t', comment.char = '')
+    ds=read.table(fid, skip = 0, fill = T, sep='\t', comment.char = '', stringsAsFactors = F)
     idx=grep('compound [0-9]', ds$V1, ignore.case = T, value = F)
     comp=gsub('Compound [0-9].?: .?', '', ds$V1[idx])
     
@@ -88,9 +88,9 @@ grand_median = function(X){
 # idx_qc: row-index indicating QC samples
 # idx_batch: batch definition as numeric array, with length equals nrow(X)
 batch_cor=function(X, idx_qc, idx_batch, qc_mean=T){
-  
+  #browser()
   grand_x=grand_median(X)
-  batch=data.frame(batch=idx_batch, idx=1:length(idx_batch), type='Sample')
+  batch=data.frame(batch=idx_batch, idx=1:length(idx_batch), type='Sample', stringsAsFactors = F)
   batch$type[idx_qc]='QC'
   
   out=dlply(batch, .(batch), function(b){
@@ -120,7 +120,7 @@ drift_cor_loess=function(X, run_order, idx_qc, smoothing=0.2){
   if(!all(run_order %in% 1:nrow(X))){stop('Check run order')}
   
   X[X==0]=NA
-  batch=data.frame(ro=run_order, idx=1:nrow(X), type='Sample')
+  batch=data.frame(ro=run_order, idx=1:nrow(X), type='Sample', stringsAsFactors = F)
   batch$type[idx_qc]='QC'
   batch$ro_qc=NA
   batch$ro_qc[idx_qc]=rank(batch$ro[idx_qc])
@@ -155,7 +155,7 @@ cvar<-function(X, qc_idx, plot=T, cv_thres=20){
   if(plot){
     df=data.frame(id=colnames(X), cv, cv_pass=cv<cv_thres, stringsAsFactors = F)
     if(nrow(df)>100){message('Large number of features! Plotting first 100.');df=df[1:100,]}
-    g1=ggplot(df, aes(id, cv, fill=cv_pass))+geom_bar(stat='identity', alpha=1)+theme_bw()+labs(y='CV (%)', x='Feature')+geom_hline(yintercept=cv_thres, col='black', linetype=2)+scale_y_continuous(limits=c(0,100))+coord_flip()+guides(fill=F)+scale_fill_manual(values=c('TRUE'='#79FFFE', 'FALSE'='#FF8B8B'))+theme(panel.grid.minor = element_blank(), panel.grid.major.y = element_blank())
+    g1=ggplot(df, aes(id, cv, fill=cv_pass))+geom_bar(stat='identity', alpha=1)+theme_bw()+labs(y='CV (%)', x='Feature')+geom_hline(yintercept=cv_thres, col='black', linetype=2)+coord_flip()+guides(fill=F)+scale_fill_manual(values=c('TRUE'='#79FFFE', 'FALSE'='#FF8B8B'))+theme(panel.grid.minor = element_blank(), panel.grid.major.y = element_blank())
     plot(g1)
   }
   
