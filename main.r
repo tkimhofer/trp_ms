@@ -30,51 +30,38 @@ grid.arrange(g1, g2, ncol=2)
 
 
 
-# get run order
+# coefficient of variation in LTR samples
+cvs=cvar(trp, idx_ltr)
+
+# outlined below is the procedure for correcting batch and run-order effects
+# define run order
 # there is one re-run 46r on plate 02 -> remove sample 46
 spl=strsplit(rownames(trp), '_')
-ro=rank(as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100 +as.numeric(sapply(spl, function(x){x[length(x)]})))
+ro=rank(as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100 + as.numeric(sapply(spl, function(x){x[length(x)]})))
 
-plro=sapply(spl,function(x){x[length(x)]})
-ra=as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100
-idx=grep('[aA-zZ]', plro)
-iid=as.numeric(gsub('[aA-zZ]', '', plro[idx]))+ra[idx]
-
-idx_keep=which(!ro %in% iid)
-
-ro=rank(as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100 +as.numeric(gsub('[aA-zZ]', '', sapply(spl, function(x){x[length(x)]}))))
-idx_keep=which(!ro %in% iid)
-
-ro1=ro[idx_keep]
-trp1=trp[idx_keep,]
-ra1=ra[idx_keep]
-
+# visualise feature stability w/o correction
 an=data.frame(ro, ltr=grepl('LTR', rownames(trp)), qc=grepl('QC', rownames(trp)), id=rownames(trp),ra ,stringsAsFactors = F)
 trp=data.frame(trp, an)
 dt=melt(trp, id.vars = colnames(an))
+ggplot(dt, aes(ro, value, shape=ltr, color=factor(ltr)))+geom_point(shape=1)+geom_point(data=dt[dt$ltr==T,])+facet_wrap(.~variable, scales='free_y')+scale_y_continuous(trans='log10')+theme_bw()
+
+# perform batch correction using rack information
+trp_bc=batch_cor(trp, idx_qc=idx_ltr, idx_batch=an$ra, qc_mean=T)
+
+# visualise feature stability after batch-correction
+dt_bc=melt(data.frame(trp_bc, an), id.vars = colnames(an))
+ggplot(dt_bc, aes(ro, value, shape=ltr, color=ltr))+geom_point(shape=1)+geom_point(data=dt1[dt1$ltr==T,])+facet_wrap(.~variable, scales='free_y')+scale_y_continuous(trans='log10')+theme_bw()
+
+# perform drift correction using run-order information
+trp_bdc=drift_cor_loess(trp_bc, run_order=rank(an$ro), idx_qc=an$ltr, smoothing=0.4)
+
+# visualise feature stability after drift-correction
+dt_dbc=melt(data.frame(trp_bdc, an), id.vars = colnames(an))
+ggplot(dt_dbc, aes(ro, value, shape=ltr, color=ltr))+geom_point(shape=1)+geom_point(data=dt1[dt1$ltr==T,])+facet_wrap(.~variable, scales='free_y')+scale_y_continuous(trans='log10')+theme_bw()
 
 
-ggplot(dt, aes(ro, value, shape=ltr, color=factor(ltr)))+geom_point(shape=1)+geom_point(data=dt[dt$ltr==T,])+facet_wrap(.~variable)+scale_y_continuous(trans='log10')+theme_bw()
-
-
-X=trp[, !colnames(trp) %in% colnames(an)]
-
-# batch correction
-idx=grep('LTR', rownames(trp))
-test=batch_cor(X, idx_qc=idx, idx_batch=an$ra, qc_mean=T)
-colnames(test)=colnames(X)
-
-# vis
-dt1=melt(data.frame(test, an), id.vars = colnames(an))
-ggplot(dt1, aes(ro, value, shape=ltr, color=ltr))+geom_point(shape=1)+geom_point(data=dt1[dt1$ltr==T,])+facet_wrap(.~variable)+scale_y_continuous(trans='log10')+theme_bw()
-
-# drift correction
-test1=drift_cor_loess(test, run_order=rank(an$ro), idx_qc=an$ltr, smoothing=0.2)
-
-
-
-
-
+# coefficient of variation (LTR samples) at corrected data
+cvs_bdc=cvar(trp_bdc, idx_ltr)
 
 
 
