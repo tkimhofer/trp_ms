@@ -30,4 +30,56 @@ grid.arrange(g1, g2, ncol=2)
 
 
 
+# get run order
+# there is one re-run 46r on plate 02 -> remove sample 46
+spl=strsplit(rownames(trp), '_')
+ro=rank(as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100 +as.numeric(sapply(spl, function(x){x[length(x)]})))
+
+plro=sapply(spl,function(x){x[length(x)]})
+ra=as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100
+idx=grep('[aA-zZ]', plro)
+iid=as.numeric(gsub('[aA-zZ]', '', plro[idx]))+ra[idx]
+
+idx_keep=which(!ro %in% iid)
+
+ro=rank(as.numeric(gsub('BARWINp', '', sapply(spl, '[[', 6)))*100 +as.numeric(gsub('[aA-zZ]', '', sapply(spl, function(x){x[length(x)]}))))
+idx_keep=which(!ro %in% iid)
+
+ro1=ro[idx_keep]
+trp1=trp[idx_keep,]
+ra1=ra[idx_keep]
+
+an=data.frame(ro, ltr=grepl('LTR', rownames(trp)), qc=grepl('QC', rownames(trp)), id=rownames(trp),ra ,stringsAsFactors = F)
+trp=data.frame(trp, an)
+dt=melt(trp, id.vars = colnames(an))
+
+
+ggplot(dt, aes(ro, value, shape=ltr, color=factor(ltr)))+geom_point(shape=1)+geom_point(data=dt[dt$ltr==T,])+facet_wrap(.~variable)+scale_y_continuous(trans='log10')+theme_bw()
+
+
+X=trp[, !colnames(trp) %in% colnames(an)]
+
+# batch correction
+idx=grep('LTR', rownames(trp))
+test=batch_cor(X, idx_qc=idx, idx_batch=an$ra, qc_mean=T)
+colnames(test)=colnames(X)
+
+# vis
+dt1=melt(data.frame(test, an), id.vars = colnames(an))
+ggplot(dt1, aes(ro, value, shape=ltr, color=ltr))+geom_point(shape=1)+geom_point(data=dt1[dt1$ltr==T,])+facet_wrap(.~variable)+scale_y_continuous(trans='log10')+theme_bw()
+
+# drift correction
+test1=drift_cor_loess(test, run_order=rank(an$ro), idx_qc=an$ltr, smoothing=0.2)
+
+
+
+
+
+
+
+
+
+
+
+
 
