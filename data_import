@@ -3,10 +3,7 @@
 ### correct for batch and drift effects detected by LTR
 # tkimhofer @ Murdoch Uni (V1, March 2021)
 
-library(metabom8)
-library(ggplot2)
-library(reshape2)
-library(gridExtra)
+source('hlp_fct.r')
 
 # get name and directory of files to read-in
 path='/path/to/dir/' # change this to desired directory
