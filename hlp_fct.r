@@ -4,6 +4,7 @@ library(reshape2)
 library(ggplot2)
 library(gridExtra)
 
+
 #############
 # function to import targeted MS data
 #############
@@ -105,6 +106,7 @@ batch_cor=function(X, idx_qc, idx_batch, qc_mean=T){
   
   idx=order(batch_reord$idx)
   out=out_reord[idx,]
+  colnames(out)=colnames(X)
   return(out)
 }
 
@@ -142,5 +144,22 @@ drift_cor_loess=function(X, run_order, idx_qc, smoothing=0.2){
   })
   
   return(b_cor)
+}
+
+
+cvar<-function(X, qc_idx, plot=T, cv_thres=20){
+  
+  cv<-apply(X[qc_idx,], 2, function(x){
+    sd(x, na.rm=T)/mean(x, na.rm=T)*100
+  })
+  if(plot){
+    df=data.frame(id=colnames(X), cv, cv_pass=cv<cv_thres, stringsAsFactors = F)
+    if(nrow(df)>100){message('Large number of features! Plotting first 100.');df=df[1:100,]}
+    g1=ggplot(df, aes(id, cv, fill=cv_pass))+geom_bar(stat='identity', alpha=1)+theme_bw()+labs(y='CV (%)', x='Feature')+geom_hline(yintercept=cv_thres, col='black', linetype=2)+scale_y_continuous(limits=c(0,100))+coord_flip()+guides(fill=F)+scale_fill_manual(values=c('TRUE'='#79FFFE', 'FALSE'='#FF8B8B'))+theme(panel.grid.minor = element_blank(), panel.grid.major.y = element_blank())
+    plot(g1)
+  }
+  
+  return(cv)
+  
 }
 
