@@ -1,8 +1,9 @@
-#library(metabom8)
+library(metabom8)
 library(plyr)
 library(reshape2)
 library(ggplot2)
 library(gridExtra)
+library(scales)
 
 
 #############
