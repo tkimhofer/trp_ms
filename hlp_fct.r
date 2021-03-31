@@ -4,6 +4,7 @@ library(reshape2)
 library(ggplot2)
 library(gridExtra)
 library(scales)
+library(readxl)
 
 
 #############
@@ -66,10 +67,6 @@ import_trp<-function(fil){
 # function to import targeted MS data (amino acids)
 #############
 import_aa<-function(fil){
-  require(readxl)
-  require(ggplot2)
-  require(reshape2)
-  require(scales)
   # fil: path to files to be imported
   # output: 2d data matrix of conc. with samples in rows and variables in cols
   # (c) T Kimhofer, V1 (03/2021)
