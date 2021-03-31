@@ -69,6 +69,7 @@ import_aa<-function(fil){
   require(readxl)
   require(ggplot2)
   require(reshape2)
+  require(scales)
   # fil: path to files to be imported
   # output: 2d data matrix of conc. with samples in rows and variables in cols
   # (c) T Kimhofer, V1 (03/2021)
@@ -106,7 +107,11 @@ import_aa<-function(fil){
   comp_un=unique(comp)
   if(nrow(comp_un)!=nrow(comp)){comp=comp_un; message('There are double entries, discarding doublets.')}
   
-  g1=ggplot(ds, aes(as.numeric(RT..min.), as.numeric(m.z.meas.), colour=Analyte.Name))+geom_point(shape=2)+theme_bw()+labs(x='rt', y='m/z')+theme(legend.position = 'bottom')
+  g1=ggplot(ds, aes(as.numeric(RT..min.), as.numeric(m.z.meas.), colour=Analyte.Name))+
+    geom_point(shape=2)+theme_bw()+labs(x='rt (min)', y='m/z')+
+    theme(legend.position = 'bottom')+
+    scale_x_continuous(sec.axis = sec_axis(~.*60, name='rt (s)', breaks = pretty_breaks()))
+  
   suppressWarnings(plot(g1))
 
   dd=dcast(comp, Data.Set~Analyte.Name, value.var = 'Quantity..units.')
@@ -116,8 +121,6 @@ import_aa<-function(fil){
   return(mat)
   
 }
-
-
 
 
 # batch correction targeted ms
