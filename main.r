@@ -9,8 +9,14 @@ source('hlp_fct.r')
 path="../barwon/targetedMS/" # change this to desired directory
 fil=list.files(path, full.names = T, pattern='Barwon') # change file pattern, e.g. to `pattern='barwon'`
 
-# import data (rows = samples, columns=metabolites)
+# import data tryptophan (trp) or amino acids (aa), select below
+
+# import tryptophane data (tab format)
 trp=import_trp(fil)
+
+# import amino acid data (excel file format)
+# trp=import_aa(fil)
+
 
 # check number of missing values per metabolite
 cs=apply(trp, 2, function(x){c('TRUE'=length(which(is.na(x))), 'FALSE'=length(which(!is.na(x))))})
