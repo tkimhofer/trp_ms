@@ -1,6 +1,9 @@
-### import tryptophane pw - tarteted ms data from vendor format
-### perform unsupervised analysis
-### correct for batch and drift effects detected by LTR
+### import targeted LC-MS data (tryptophane pw metabolites) 
+### reshape vendor data format to 2D matrix
+### 
+### perform PCA, check QC scores and CV
+### correct for batch and drift effects using QC/LTR
+### check CV
 # tkimhofer @ Murdoch Uni (V1, March 2021)
 
 source('hlp_fct.r')
