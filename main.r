@@ -1,7 +1,7 @@
-### import targeted LC-MS data (tryptophane pw metabolites) 
+### import targeted LC-MS data (biogenic amines or trp assay) 
 ### reshape vendor data format to 2D matrix
-### 
-### perform PCA, check QC scores and CV
+### QC: check missing values, coeffVar
+### NA imputation and PCA
 ### correct for batch and drift effects using QC/LTR
 ### check CV
 # tkimhofer @ Murdoch Uni (V1, March 2021)
@@ -9,10 +9,8 @@
 source('hlp_fct.r')
 
 # get name and directory of files to read-in
-path="../barwon/targetedMS/" # change this to desired directory
-fil=list.files(path, full.names = T, pattern='Barwon') # change file pattern, e.g. to `pattern='barwon'`
-
-# import data tryptophan (trp) or amino acids (aa), select below
+path=[...] # change to directory containing tsv files
+fil=list.files(path, full.names = T, pattern=[...]) # change file naming pattern, e.g. to `pattern='study_id'`
 
 # import tryptophane data (tab format)
 trp=import_trp(fil)
@@ -49,7 +47,6 @@ ggplot(ccv, aes(id, cvs))+geom_bar(stat='identity')+coord_flip()
 
 # outlined below is the procedure for correcting batch and run-order effects
 # define run order
-# there is one re-run 46r on plate 02 -> remove sample 46
 spl=strsplit(rownames(trp), '_')
 ro=rank(as.numeric(gsub('.*p', '', sapply(spl, '[[', 6)))*100 + as.numeric(sapply(spl, function(x){x[length(x)]})))
 rack=as.numeric(gsub('.*p', '', sapply(spl, '[[', 6)))
@@ -78,7 +75,7 @@ dt_dbc=melt(data.frame(trp_bdc, an), id.vars = colnames(an))
 ggplot(dt_dbc, aes(ro, value, shape=ltr, color=ltr))+geom_point(shape=1)+geom_point(data=dt_bc[dt_bc$ltr==T,])+facet_wrap(.~variable, scales='free_y')+scale_y_continuous(trans='log10')+theme_bw()
 
 
-# coefficient of variation (LTR samples) at corrected data
+# coefficient of variation (LTR samples) of corrected data
 cvs_bdc=cvar(trp_bdc, idx_ltr)
 
 
