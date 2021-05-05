@@ -67,6 +67,10 @@ import_trp<-function(fil){
 # function to import targeted MS data (amino acids)
 #############
 import_aa<-function(fil){
+  require(readxl)
+  require(ggplot2)
+  require(scales)
+  require(reshape2)
   # fil: path to files to be imported
   # output: 2d data matrix of conc. with samples in rows and variables in cols
   # (c) T Kimhofer, V1 (03/2021)
@@ -93,7 +97,7 @@ import_aa<-function(fil){
       print(table(ds$Quantity..units.[idx1]))
       cat('\n')
     }
-
+    
     comp_info=ds
     
     return(comp_info)
@@ -104,13 +108,13 @@ import_aa<-function(fil){
   comp_un=unique(comp)
   if(nrow(comp_un)!=nrow(comp)){comp=comp_un; message('There are double entries, discarding doublets.')}
   
-  g1=ggplot(ds, aes(as.numeric(RT..min.), as.numeric(m.z.meas.), colour=Analyte.Name))+
+  g1=ggplot(comp, aes(as.numeric(RT..min.), as.numeric(m.z.meas.), colour=Analyte.Name))+
     geom_point(shape=2)+theme_bw()+labs(x='rt (min)', y='m/z')+
     theme(legend.position = 'bottom')+
     scale_x_continuous(sec.axis = sec_axis(~.*60, name='rt (s)', breaks = pretty_breaks()))
   
   suppressWarnings(plot(g1))
-
+  
   dd=dcast(comp, Data.Set~Analyte.Name, value.var = 'Quantity..units.')
   mat=suppressWarnings(apply(dd[,-1], 2, as.numeric))
   rownames(mat)=dd$Name
