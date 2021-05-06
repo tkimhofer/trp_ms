@@ -174,6 +174,92 @@ batch_cor=function(X, idx_qc, idx_batch, qc_mean=T){
   return(out)
 }
 
+
+read_aa_V1=function(fils, filter=T, plot=T, interactive=T){
+  require(ggplot2)
+  require(reshape2)
+  require(scales)
+  fils=rep('/Users/TKimhofer/Downloads/PAI-05_Barwon_AA_Plate1.TSV', 2)
+  dats=lapply(fils, function(x){
+    #browser()
+    rfile=read.delim(x, sep = '\t', header = T, fileEncoding="latin1")
+    
+    diag=rfile[,colnames(rfile) %in% c('m.z', 'Retention.Time.min.', 'AnalyteName', 'AnalysisName')]
+    
+    ds=rfile[,colnames(rfile) %in% c('AnalysisName', 'Quantity.w..unit', 'AnalyteName')]
+    ds$Quantity.w..unit=as.numeric(gsub(' units', '', ds$Quantity.w..unit))
+    
+    dout=dcast(ds, AnalysisName~AnalyteName, value.var='Quantity.w..unit')
+    return(list(dout, diag))
+  })
+  
+  out=do.call(rbind, lapply(dats, '[[', 1))
+  
+  
+  id=out$AnalysisName
+  if(length(id)!=length(unique(id))){cat('File names are not unique - appending index.'); id=paste0(id, 1:length(id))}
+  
+  rownames(out)=id
+  idx_ckeep=which(!colnames(out) %in% 'AnalysisName')
+  out=out[,idx_ckeep]
+  
+  if(filter){
+    #browser()
+    #grep('\\[IS\\]', colnames(out), value=T)
+    # filter for analytes
+    idx=grep('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', colnames(out), value=F, invert = T)
+    out=out[,idx]
+    
+    # remove QC and blank
+    idx=grep('QC|Blank', rownames(out), ignore.case = T, invert = T)
+    out=out[idx,]
+  }
+  
+ 
+  
+  if(plot){
+    comp=do.call(rbind, lapply(dats, '[[', 2))
+    
+    if(filter){
+      # filter for analytes
+      idx=grep('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', comp$AnalyteName, value=F, invert = T)
+      comp=comp[idx,]
+      
+      # remove QC and blank
+      idx=grep('QC|Blank', comp$AnalysisName, ignore.case = T, invert = T)
+      out=out[idx,]
+    }
+    
+    
+    
+    if(!interactive){
+      g1=ggplot(comp, aes(as.numeric(Retention.Time.min.), as.numeric(m.z), colour=AnalyteName))+
+        geom_point(shape=2)+theme_bw()+labs(x='rt (min)', y='m/z')+
+        theme(legend.position = 'bottom')+
+        scale_x_continuous(sec.axis = sec_axis(~.*60, name='rt (s)', breaks = pretty_breaks()))
+      
+      suppressWarnings(plot(g1))
+    }else{
+        require(plotly)
+      comp$m.z=as.numeric(comp$m.z)
+      comp$Retention.Time.min.=as.numeric(comp$Retention.Time.min.)
+      cmap=c('mz'='m.z', 'rt'='Retention.Time.min.', 'compound'='AnalyteName', 'fid'='AnalysisName')
+      colnames(comp)=names(cmap)[match(colnames(comp), cmap)]
+
+      fig <- suppressWarnings(plot_ly(comp, x = ~rt, y = ~mz, text = ~paste(compound, '$<br>Sample:', fid), color = ~compound, marker=list(), type="scatter", mode='markers'))
+
+      (suppressWarnings(fig))
+      }
+    
+      }else(fig=NULL)
+    
+    
+
+  return(list(out, fig))
+  
+}
+
+
 # drift correction function
 # X: feature matrix without batch effects
 # run_order: run order of samples represented in X
