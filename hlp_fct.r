@@ -175,21 +175,36 @@ batch_cor=function(X, idx_qc, idx_batch, qc_mean=T){
 }
 
 
-read_aa_V1=function(fils, filter=T, plot=T, interactive=T){
+read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
   require(ggplot2)
   require(reshape2)
   require(scales)
-  fils=rep('/Users/TKimhofer/Downloads/PAI-05_Barwon_AA_Plate1.TSV', 2)
+  #fils=rep('/Users/TKimhofer/Downloads/PAI-05_Barwon_AA_Plate1.TSV', 2)
   dats=lapply(fils, function(x){
-    #browser()
+    cat(x);cat('\n')
     rfile=read.delim(x, sep = '\t', header = T, fileEncoding="latin1")
-    
     diag=rfile[,colnames(rfile) %in% c('m.z', 'Retention.Time.min.', 'AnalyteName', 'AnalysisName')]
     
     ds=rfile[,colnames(rfile) %in% c('AnalysisName', 'Quantity.w..unit', 'AnalyteName')]
     ds$Quantity.w..unit=as.numeric(gsub(' units', '', ds$Quantity.w..unit))
+
+    
+    sub=ds[,colnames(ds) %in% c('AnalysisName', 'AnalyteName')]
+    if(nrow(sub)!=nrow(unique(sub))){
+      iid=paste(sub$AnalysisName, sub$AnalyteName, sep='-')
+      idx_rm=which(iid %in% names(which(table(iid)>1)))
+      message('The following IDs have more than one entry in the imported data file: ')
+      print(iid[idx_rm])
+      message('Removing doublicates for further processing.')
+      ds=ds[-idx_rm,]
+    }
+    
+    # remove cystine 
+    idx=grepl('^Cystein', ds$AnalyteName)
+    if(any(!idx)){message('Removing cystein from assay'); ds=ds[grepl('^Cystein', ds$AnalyteName),]}
     
     dout=dcast(ds, AnalysisName~AnalyteName, value.var='Quantity.w..unit')
+    cat('\n')
     return(list(dout, diag))
   })
   
@@ -204,8 +219,6 @@ read_aa_V1=function(fils, filter=T, plot=T, interactive=T){
   out=out[,idx_ckeep]
   
   if(filter){
-    #browser()
-    #grep('\\[IS\\]', colnames(out), value=T)
     # filter for analytes
     idx=grep('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', colnames(out), value=F, invert = T)
     out=out[,idx]
@@ -217,7 +230,7 @@ read_aa_V1=function(fils, filter=T, plot=T, interactive=T){
   
  
   
-  if(plot){
+  if(plotting){
     comp=do.call(rbind, lapply(dats, '[[', 2))
     
     if(filter){
@@ -251,13 +264,14 @@ read_aa_V1=function(fils, filter=T, plot=T, interactive=T){
       (suppressWarnings(fig))
       }
     
-      }else(fig=NULL)
+      }else{fig=NULL}
     
     
 
   return(list(out, fig))
   
 }
+
 
 
 # drift correction function
