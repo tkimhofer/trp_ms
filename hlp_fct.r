@@ -174,7 +174,6 @@ batch_cor=function(X, idx_qc, idx_batch, qc_mean=T){
   return(out)
 }
 
-
 read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
   require(ggplot2)
   require(reshape2)
@@ -188,28 +187,36 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
     ds=rfile[,colnames(rfile) %in% c('AnalysisName', 'Quantity.w..unit', 'AnalyteName')]
     ds$Quantity.w..unit=as.numeric(gsub(' units', '', ds$Quantity.w..unit))
 
+    if(filter){
+      # filter for analytes
+      idx1=!grepl('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', ds$AnalyteName)
+      idx2=!grepl('Cal|QC|Blank', ds$AnalysisName)
+      ds=ds[(idx1 & idx2),]
+    }
     
     sub=ds[,colnames(ds) %in% c('AnalysisName', 'AnalyteName')]
     if(nrow(sub)!=nrow(unique(sub))){
       iid=paste(sub$AnalysisName, sub$AnalyteName, sep='-')
       idx_rm=which(iid %in% names(which(table(iid)>1)))
       message('The following IDs have more than one entry in the imported data file: ')
-      print(iid[idx_rm])
+      print(iid[idx_rm[-1]])
       message('Removing doublicates for further processing.')
       ds=ds[-idx_rm,]
     }
     
     # remove cystine 
-    idx=grepl('^Cystein', ds$AnalyteName)
-    if(any(!idx)){message('Removing cystein from assay'); ds=ds[grepl('^Cystein', ds$AnalyteName),]}
+    length(table(ds$AnalyteName))
+    idx=grepl('^Cystine', ds$AnalyteName, ignore.case = T)
+    if(any(idx)){message('Removing cystein from assay'); ds=ds[!idx,]}
     
     dout=dcast(ds, AnalysisName~AnalyteName, value.var='Quantity.w..unit')
+    print(dim(dout))
     cat('\n')
     return(list(dout, diag))
   })
-  
+
   out=do.call(rbind, lapply(dats, '[[', 1))
-  
+
   
   id=out$AnalysisName
   if(length(id)!=length(unique(id))){cat('File names are not unique - appending index.'); id=paste0(id, 1:length(id))}
@@ -259,7 +266,7 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
       cmap=c('mz'='m.z', 'rt'='Retention.Time.min.', 'compound'='AnalyteName', 'fid'='AnalysisName')
       colnames(comp)=names(cmap)[match(colnames(comp), cmap)]
 
-      fig <- suppressWarnings(plot_ly(comp, x = ~rt, y = ~mz, text = ~paste(compound, '$<br>Sample:', fid), color = ~compound, marker=list(), type="scatter", mode='markers'))
+      fig <- suppressWarnings(plot_ly(comp, x = ~rt, y = ~mz, text = ~paste(compound, '<br>Sample:', fid), color = ~compound, marker=list(), type="scatter", mode='markers'))
 
       (suppressWarnings(fig))
       }
@@ -271,6 +278,7 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
   return(list(out, fig))
   
 }
+
 
 
 
