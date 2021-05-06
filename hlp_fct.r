@@ -174,6 +174,9 @@ batch_cor=function(X, idx_qc, idx_batch, qc_mean=T){
   return(out)
 }
 
+
+
+
 read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
   require(ggplot2)
   require(reshape2)
@@ -212,30 +215,22 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
     dout=dcast(ds, AnalysisName~AnalyteName, value.var='Quantity.w..unit')
     print(dim(dout))
     cat('\n')
+    
+    # if(any(is.na(dout))){browser()}
+    # print(length(which(is.na(ds$Quantity.w..unit))))
     return(list(dout, diag))
   })
 
   out=do.call(rbind, lapply(dats, '[[', 1))
 
-  
   id=out$AnalysisName
   if(length(id)!=length(unique(id))){cat('File names are not unique - appending index.'); id=paste0(id, 1:length(id))}
   
+  #browser()
   rownames(out)=id
   idx_ckeep=which(!colnames(out) %in% 'AnalysisName')
   out=out[,idx_ckeep]
   
-  if(filter){
-    # filter for analytes
-    idx=grep('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', colnames(out), value=F, invert = T)
-    out=out[,idx]
-    
-    # remove QC and blank
-    idx=grep('QC|Blank', rownames(out), ignore.case = T, invert = T)
-    out=out[idx,]
-  }
-  
- 
   
   if(plotting){
     comp=do.call(rbind, lapply(dats, '[[', 2))
@@ -244,10 +239,6 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
       # filter for analytes
       idx=grep('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', comp$AnalyteName, value=F, invert = T)
       comp=comp[idx,]
-      
-      # remove QC and blank
-      idx=grep('QC|Blank', comp$AnalysisName, ignore.case = T, invert = T)
-      out=out[idx,]
     }
     
     
@@ -272,10 +263,8 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
       }
     
       }else{fig=NULL}
-    
-    
 
-  return(list(out, fig))
+  return(list(data=out, figure=fig))
   
 }
 
