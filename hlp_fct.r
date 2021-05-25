@@ -10,16 +10,20 @@ library(readxl)
 #############
 # function to import targeted MS data
 #############
-import_trp<-function(fil){
+import_trp<-function(fil, rm.SIL=TRUE){
   # fil: path to files to be imported
   # output: 2d data matrix of conc. with samples in rows and variables in cols
   # (c) T Kimhofer, V1 (03/2021)
-  
   # for each file
   comp=lapply(fil, function(fid){
     print(fid)
+    if(grepl('csv$', fid)){
+      ds=read.table(fid, skip = 0, fill = T, sep=',', comment.char = '', stringsAsFactors = F)
+    }else{
+      ds=read.table(fid, skip = 0, fill = T, sep='\t', comment.char = '', stringsAsFactors = F)
+    }
     # read and extract compounds
-    ds=read.table(fid, skip = 0, fill = T, sep='\t', comment.char = '', stringsAsFactors = F)
+   
     idx=grep('compound [0-9]', ds$V1, ignore.case = T, value = F)
     comp=gsub('Compound [0-9].?: .?', '', ds$V1[idx])
     
@@ -27,15 +31,33 @@ import_trp<-function(fil){
     comp_info=lapply(seq(length(idx)), function(m){
       #browser()
       i=idx[m]
-      iid=grep("^[0-9].?", ds$V1[i:nrow(ds)], invert = T)
-      iid1=grep("^$", ds$V3[i+iid[2]:nrow(ds)], invert = F)
-      if(i==idx[length(idx)]){;out=ds[seq((i+iid[2]), nrow(ds)),]}else{
-        out=ds[seq((i+iid[2]), (i+iid1[1]-1)),]
-      }
+      
+      # find hash as start of data for compount m
+      iid=grep("^#$", ds$V2[i:nrow(ds)], invert = F)
+      
+      # extract data for start hash to idx next compound minus 1 or end of ds
+      idx_start=i+iid[1]
+      if(length(idx)==m){idx_end=nrow(ds)}else{idx_end=idx[m+1]}
+      
+      
+      out=ds[idx_start:idx_end,]
+      colnames(out)=ds[idx_start-1,]
+      # 
+      # 
+      # # find numbers in first columns, that defines boundary between compounds
+      # iid=grep("^[0-9].?", ds$V1[i:nrow(ds)], invert = T)
+      # # find empty string in sample id, 
+      # iid1=grep("^$", ds$V3[(i+iid[2]):nrow(ds)], invert = F)
+      # # return
+      # if(i==idx[length(idx)]){;out=ds[seq((i+iid[2]), nrow(ds)),]}else{
+      #   out=ds[seq((i+iid[2]), (i+iid1[1]-1)),]
+      # }
       #rm na
       #idx_notna=which(apply(out, 1, function(x){length(which(is.na(x)))})<= round(ncol(out)/3))
       #out[idx_notna,]
-      colnames(out)=ds[i+iid[2]-1,]
+      # get colnames
+      # apply(ds, 1, grep, 'conc', ignore.case=T)
+      # colnames(out)=ds[i+iid[2]-1,]
       out$compound=comp[m]
       out
     })
@@ -48,12 +70,20 @@ import_trp<-function(fil){
   
   comp=do.call(rbind, comp)
   
+  # remove entries with undefined sample ids 
+  comp=comp[!grepl('^$|^ $', comp$Name),]
+  
+  # remove double entries
   comp_un=unique(comp)
   if(nrow(comp_un)!=nrow(comp)){comp=comp_un; message('There are double entries, discarding doublets.')}
   
-  #browser()
   # reshape
   dd=dcast(comp, Name~compound, value.var = 'Conc.')
+  if(rm.SIL){
+    dd=dd[,grep('^SIL', colnames(dd), invert = T)]
+  }
+  
+  
   mat=apply(dd[,-1], 2, as.numeric)
   rownames(mat)=dd$Name
   
@@ -189,7 +219,7 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
     
     ds=rfile[,colnames(rfile) %in% c('AnalysisName', 'Quantity.w..unit', 'AnalyteName')]
     ds$Quantity.w..unit=as.numeric(gsub(' units', '', ds$Quantity.w..unit))
-
+    
     if(filter){
       # filter for analytes
       idx1=!grepl('[A-Z]+[0-9]+$|[0-9]+[A-Z]+$|Acc.?QTag$|\\[IS\\]', ds$AnalyteName)
@@ -220,9 +250,9 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
     # print(length(which(is.na(ds$Quantity.w..unit))))
     return(list(dout, diag))
   })
-
+  
   out=do.call(rbind, lapply(dats, '[[', 1))
-
+  
   id=out$AnalysisName
   if(length(id)!=length(unique(id))){cat('File names are not unique - appending index.'); id=paste0(id, 1:length(id))}
   
@@ -251,19 +281,19 @@ read_aa_V1=function(fils, filter=T, plotting=T, interactive=T){
       
       suppressWarnings(plot(g1))
     }else{
-        require(plotly)
+      require(plotly)
       comp$m.z=as.numeric(comp$m.z)
       comp$Retention.Time.min.=as.numeric(comp$Retention.Time.min.)
       cmap=c('mz'='m.z', 'rt'='Retention.Time.min.', 'compound'='AnalyteName', 'fid'='AnalysisName')
       colnames(comp)=names(cmap)[match(colnames(comp), cmap)]
-
+      
       fig <- suppressWarnings(plot_ly(comp, x = ~rt, y = ~mz, text = ~paste(compound, '<br>Sample:', fid), color = ~compound, marker=list(), type="scatter", mode='markers'))
-
+      
       (suppressWarnings(fig))
-      }
+    }
     
-      }else{fig=NULL}
-
+  }else{fig=NULL}
+  
   return(list(data=out, figure=fig))
   
 }
